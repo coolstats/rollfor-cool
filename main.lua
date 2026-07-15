@@ -537,6 +537,8 @@ local function setup_slash_commands()
   M.api().SlashCmdList[ "RFR" ] = on_reset_dropped_loot_announce_command
   SLASH_SR1 = "/sr"
   M.api().SlashCmdList[ "SR" ] = on_softres_command
+  SLASH_SRM1 = "/srm"
+  M.api().SlashCmdList[ "SRM" ] = M.softres_gui.show_mapping
   SLASH_SRS1 = "/srs"
   M.api().SlashCmdList[ "SRS" ] = M.softres_check.show_softres
   SLASH_SRC1 = "/src"

@@ -30,9 +30,11 @@ The folder includes `RollFor_cool.toc` for that install name. It also keeps `Rol
 3. In game, open the import window with `/sr`.
 4. Paste the export data and click `Import!`.
 
-The `Use names over IDs` option is enabled by default. Keep it enabled for Trial of the Crusader heroic runs, because softres.it may only expose normal-mode items while Warmane heroic bosses drop different item IDs with the same item names.
+The `Heroic item matching` option is enabled by default. Keep it enabled for Trial of the Crusader heroic runs, because softres.it may only expose normal-mode items while Warmane heroic bosses drop different item IDs with the same item names.
 
 This port does not ship a WotLK Classic/re-release item-ID table. For original 3.3.5a/Warmane compatibility, it uses item names from the softres.it export when available and falls back to the running 30300 client's `GetItemInfo` cache for any IDs that need to be resolved.
+
+Open `/srm` to inspect the heroic matching panel. Before a heroic drop is seen, it shows the imported reserve IDs and matching names. After a same-named dropped item is matched, the panel records that dropped item ID under `Matched Drops`.
 
 ## Commands
 
@@ -44,6 +46,7 @@ This port does not ship a WotLK Classic/re-release item-ID table. For original 3
 /fr                 Finish the current roll early
 /cr                 Cancel the current roll
 /sr                 Open the SR import/table window
+/srm                Inspect heroic item matching
 /srs                Print current soft-reserved items
 /src                Check who has not soft-reserved
 /srca               Announce missing soft reserves

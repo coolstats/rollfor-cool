@@ -72,12 +72,30 @@ function M.new( db, use_item_names, ace_timer )
   -- dropped_item_id -> effective entry, or false if checked with no match. Kept separate per data
   -- table (soft-res vs hard-res), since a miss against one doesn't imply a miss against the other.
   local sr_pending_lookup_ids, hr_pending_lookup_ids = {}, {}
+  local sr_name_match_history, hr_name_match_history = {}, {}
   local retry_scheduled = false
 
   local function clear_lookup_cache( cache )
     for k in pairs( cache ) do
       cache[ k ] = nil
     end
+  end
+
+  local function copy_item_ids( item_ids )
+    local result = {}
+    for _, id in ipairs( item_ids or {} ) do
+      table.insert( result, id )
+    end
+    return result
+  end
+
+  local function record_name_match( dropped_item_id, dropped_item_name, matched_item_ids, history )
+    if not history then return end
+    history[ dropped_item_id ] = {
+      item_id = dropped_item_id,
+      name = dropped_item_name,
+      matched_item_ids = copy_item_ids( matched_item_ids )
+    }
   end
 
   local function normalize_name( name )
@@ -151,7 +169,8 @@ function M.new( db, use_item_names, ace_timer )
   ---@param name_index table<string, number[]>
   ---@param lookup_cache table<number, table|false>
   ---@param merge_fn fun( existing: table, incoming: table ): table
-  local function get_effective_entry( item_id, data, name_index, lookup_cache, merge_fn )
+  ---@param match_history table<number, table>?
+  local function get_effective_entry( item_id, data, name_index, lookup_cache, merge_fn, match_history )
     if data[ item_id ] then return data[ item_id ] end
 
     if not use_item_names or not use_item_names.is_enabled() then return nil end
@@ -172,6 +191,8 @@ function M.new( db, use_item_names, ace_timer )
       lookup_cache[ item_id ] = false
       return nil
     end
+
+    record_name_match( item_id, name, matches, match_history )
 
     local merged = data[ matches[ 1 ] ]
     for i = 2, #matches do
@@ -220,6 +241,7 @@ function M.new( db, use_item_names, ace_timer )
   local function reset_name_index()
     sr_name_index, hr_name_index = {}, {}
     sr_pending_lookup_ids, hr_pending_lookup_ids = {}, {}
+    sr_name_match_history, hr_name_match_history = {}, {}
     name_index_dirty = true
   end
 
@@ -233,7 +255,7 @@ function M.new( db, use_item_names, ace_timer )
   end
 
   local function get( item_id )
-    local entry = get_effective_entry( item_id, softres_data, sr_name_index, sr_pending_lookup_ids, merge_softressed_items )
+    local entry = get_effective_entry( item_id, softres_data, sr_name_index, sr_pending_lookup_ids, merge_softressed_items, sr_name_match_history )
     return entry and m.clone( entry.rollers ) or {}
   end
 
@@ -263,7 +285,7 @@ function M.new( db, use_item_names, ace_timer )
 
   local function is_player_softressing( player_name, item_id )
     if item_id then
-      local entry = get_effective_entry( item_id, softres_data, sr_name_index, sr_pending_lookup_ids, merge_softressed_items )
+      local entry = get_effective_entry( item_id, softres_data, sr_name_index, sr_pending_lookup_ids, merge_softressed_items, sr_name_match_history )
       local player = entry and find_roller( player_name, entry.rollers )
       return player ~= nil and player.name == player_name
     end
@@ -310,14 +332,14 @@ function M.new( db, use_item_names, ace_timer )
   end
 
   local function is_item_hardressed( item_id )
-    return get_effective_entry( item_id, hardres_data, hr_name_index, hr_pending_lookup_ids, merge_hardressed_items ) ~= nil
+    return get_effective_entry( item_id, hardres_data, hr_name_index, hr_pending_lookup_ids, merge_hardressed_items, hr_name_match_history ) ~= nil
   end
 
   local function get_item_quality( item_id )
-    local sr_entry = get_effective_entry( item_id, softres_data, sr_name_index, sr_pending_lookup_ids, merge_softressed_items )
+    local sr_entry = get_effective_entry( item_id, softres_data, sr_name_index, sr_pending_lookup_ids, merge_softressed_items, sr_name_match_history )
     if sr_entry then return sr_entry.quality end
 
-    local hr_entry = get_effective_entry( item_id, hardres_data, hr_name_index, hr_pending_lookup_ids, merge_hardressed_items )
+    local hr_entry = get_effective_entry( item_id, hardres_data, hr_name_index, hr_pending_lookup_ids, merge_hardressed_items, hr_name_match_history )
     return hr_entry and hr_entry.quality
   end
 
@@ -339,6 +361,64 @@ function M.new( db, use_item_names, ace_timer )
     return result
   end
 
+  local function get_history_by_source_item_id( history )
+    local result = {}
+
+    for dropped_item_id, match in pairs( history ) do
+      for _, source_item_id in ipairs( match.matched_item_ids or {} ) do
+        result[ source_item_id ] = result[ source_item_id ] or {}
+        table.insert( result[ source_item_id ], dropped_item_id )
+      end
+    end
+
+    for _, item_ids in pairs( result ) do
+      table.sort( item_ids )
+    end
+
+    return result
+  end
+
+  local function add_name_mapping_rows( rows, reserve_type, data, match_history )
+    local all_resolved = true
+    local history_by_source = get_history_by_source_item_id( match_history )
+
+    for item_id, item in pairs( data ) do
+      local name = get_item_name( item_id, item )
+      if not name then all_resolved = false end
+
+      table.insert( rows, {
+        type = reserve_type,
+        item_id = item_id,
+        item_name = name,
+        quality = item.quality,
+        rollers = item.rollers and #item.rollers or nil,
+        matched_drop_item_ids = history_by_source[ item_id ] or {}
+      } )
+    end
+
+    return all_resolved
+  end
+
+  local function get_name_mapping_info()
+    local rows = {}
+    local sr_resolved = add_name_mapping_rows( rows, "SR", softres_data, sr_name_match_history )
+    local hr_resolved = add_name_mapping_rows( rows, "HR", hardres_data, hr_name_match_history )
+
+    table.sort( rows, function( left, right )
+      if left.type ~= right.type then return left.type > right.type end
+      local left_name = left.item_name or ""
+      local right_name = right.item_name or ""
+      if left_name ~= right_name then return left_name < right_name end
+      return left.item_id < right.item_id
+    end )
+
+    return {
+      enabled = use_item_names and use_item_names.is_enabled() or false,
+      all_resolved = sr_resolved and hr_resolved,
+      rows = rows
+    }
+  end
+
   return {
     get = get,
     get_all_rollers = get_all_rollers,
@@ -348,6 +428,7 @@ function M.new( db, use_item_names, ace_timer )
     get_hr_item_ids = get_hr_item_ids,
     is_item_hardressed = is_item_hardressed,
     get_player_items = get_player_items,
+    get_name_mapping_info = get_name_mapping_info,
     import = import,
     clear = clear,
     persist = persist

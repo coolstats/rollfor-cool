@@ -37,6 +37,12 @@ local COL_ITEM   = 280
 local COL_TYPE   = 80
 local COL_SRPLUS = 80
 
+local MAP_COL_TYPE    = 55
+local MAP_COL_ID      = 85
+local MAP_COL_NAME    = 330
+local MAP_COL_ROLLERS = 70
+local MAP_COL_MATCHED = 210
+
 local ROW_HEIGHT    = 18
 local HEADER_HEIGHT = 22
 
@@ -47,7 +53,7 @@ local RETRY_INTERVAL = 15
 -- Import frame (unchanged from original)
 -- ---------------------------------------------------------------------------
 
-local function create_import_frame( api, on_import, on_clear, on_cancel, on_dirty, use_item_names, on_use_item_names_toggled )
+local function create_import_frame( api, on_import, on_clear, on_cancel, on_dirty, use_item_names, on_use_item_names_toggled, on_show_mapping )
   local frame = m.create_backdrop_frame( api(), "Frame", "RollForSoftResLootFrame", UIParent )
   frame:Hide()
   frame:SetWidth( 565 )
@@ -152,12 +158,21 @@ local function create_import_frame( api, on_import, on_clear, on_cancel, on_dirt
   local use_names_label = frame:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
   use_names_label:SetPoint( "LEFT", use_names_checkbox, "RIGHT", 0, 1 )
   use_names_label:SetTextColor( 1, 1, 1, 1 )
-  use_names_label:SetText( "Use names over IDs" )
+  use_names_label:SetText( "Heroic item matching" )
 
   local use_names_help = frame:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
   use_names_help:SetPoint( "LEFT", use_names_label, "RIGHT", 6, 0 )
   use_names_help:SetTextColor( 0.7, 0.7, 0.7, 1 )
-  use_names_help:SetText( "(Use when softres does not map Heroic items properly)" )
+  use_names_help:SetText( "(name-based)" )
+
+  local mapping_button = api().CreateFrame( "Button", nil, frame, "UIPanelButtonTemplate" )
+  mapping_button:SetScript( "OnClick", function()
+    if on_show_mapping then on_show_mapping() end
+  end )
+  mapping_button:SetPoint( "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -27, 41 )
+  mapping_button:SetHeight( 20 )
+  mapping_button:SetWidth( 130 )
+  mapping_button:SetText( "Inspect Mapping" )
 
   frame:SetScript( "OnShow", function()
     cancel_button:SetText( "Close" )
@@ -447,6 +462,208 @@ local function create_table_frame( api, on_back )
 end
 
 -- ---------------------------------------------------------------------------
+-- Heroic item matching frame
+-- ---------------------------------------------------------------------------
+
+local function create_mapping_frame( api, on_back, use_item_names, on_use_item_names_toggled, on_refresh )
+  local frame = m.create_backdrop_frame( api(), "Frame", "RollForSoftResMappingFrame", UIParent )
+  frame:Hide()
+  frame:SetWidth( TABLE_FRAME_WIDTH )
+  frame:SetHeight( TABLE_FRAME_HEIGHT )
+  frame:SetPoint( "CENTER", UIParent, "CENTER", 0, 0 )
+  frame:EnableMouse()
+  frame:SetMovable( true )
+  frame:SetFrameStrata( "DIALOG" )
+  frame:SetBackdrop( frame_backdrop )
+  frame:SetBackdropColor( 0, 0, 0, 1 )
+  frame:SetToplevel( true )
+
+  local close_button = api().CreateFrame( "Button", nil, frame, "UIPanelCloseButton" )
+  close_button:SetPoint( "TOPRIGHT", frame, "TOPRIGHT", 0, 0 )
+  close_button:SetScript( "OnClick", function() frame:Hide() end )
+
+  local title = frame:CreateFontString( nil, "OVERLAY", "GameFontNormal" )
+  title:SetPoint( "TOPLEFT", frame, "TOPLEFT", 20, -14 )
+  title:SetTextColor( 1, 1, 1, 1 )
+  title:SetText( string.format( "%s  -  Heroic Item Matching", m.colors.blue( "rollfor_cool" ) ) )
+
+  local enabled_checkbox = api().CreateFrame( "CheckButton", nil, frame, "UICheckButtonTemplate" )
+  enabled_checkbox:SetWidth( 20 )
+  enabled_checkbox:SetHeight( 20 )
+  enabled_checkbox:SetPoint( "TOPLEFT", frame, "TOPLEFT", 18, -34 )
+  enabled_checkbox:SetScript( "OnClick", function()
+    local checked = enabled_checkbox:GetChecked() and true or false
+    if on_use_item_names_toggled then on_use_item_names_toggled( checked ) end
+    if on_refresh then on_refresh() end
+  end )
+
+  local enabled_label = frame:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+  enabled_label:SetPoint( "LEFT", enabled_checkbox, "RIGHT", 0, 1 )
+  enabled_label:SetTextColor( 1, 1, 1, 1 )
+  enabled_label:SetText( "Heroic item matching" )
+
+  local inner = m.create_backdrop_frame( api(), "Frame", nil, frame )
+  inner:SetBackdrop( control_backdrop )
+  inner:SetBackdropColor( 0, 0, 0 )
+  inner:SetBackdropBorderColor( 0.4, 0.4, 0.4 )
+  inner:SetPoint( "TOPLEFT",     frame, "TOPLEFT",     17,  -60 )
+  inner:SetPoint( "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -17,  43 )
+
+  local header_bar = api().CreateFrame( "Frame", nil, inner )
+  header_bar:SetPoint( "TOPLEFT",  inner, "TOPLEFT",  4,   -4 )
+  header_bar:SetPoint( "TOPRIGHT", inner, "TOPRIGHT", -22, -4 )
+  header_bar:SetHeight( HEADER_HEIGHT )
+
+  local header_bg = header_bar:CreateTexture( nil, "BACKGROUND" )
+  header_bg:SetAllPoints()
+  header_bg:SetTexture( 0.15, 0.15, 0.15, 1 )
+
+  local function make_header_cell( label, x, width )
+    local fs = header_bar:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+    fs:SetPoint( "LEFT", header_bar, "LEFT", x + 4, 0 )
+    fs:SetWidth( width - 8 )
+    fs:SetJustifyH( "LEFT" )
+    fs:SetText( m.colors.white( label ) )
+  end
+
+  make_header_cell( "Type",          0,                                                                 MAP_COL_TYPE )
+  make_header_cell( "Reserve ID",    MAP_COL_TYPE,                                                      MAP_COL_ID )
+  make_header_cell( "Matching Name", MAP_COL_TYPE + MAP_COL_ID,                                         MAP_COL_NAME )
+  make_header_cell( "Rollers",       MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME,                          MAP_COL_ROLLERS )
+  make_header_cell( "Matched Drops", MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME + MAP_COL_ROLLERS,        MAP_COL_MATCHED )
+
+  local scroll_frame = api().CreateFrame( "ScrollFrame", "RollForSRMappingScroll", inner, "UIPanelScrollFrameTemplate" )
+  scroll_frame:SetPoint( "TOPLEFT",     header_bar, "BOTTOMLEFT",  0,   -2 )
+  scroll_frame:SetPoint( "BOTTOMRIGHT", inner,      "BOTTOMRIGHT", -22,  4 )
+
+  local scroll_child = api().CreateFrame( "Frame", nil, scroll_frame )
+  scroll_frame:SetScrollChild( scroll_child )
+  scroll_child:SetWidth( 1 )
+  scroll_child:SetHeight( 1 )
+
+  local back_button = api().CreateFrame( "Button", nil, frame, "UIPanelButtonTemplate" )
+  back_button:SetPoint( "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -27, 17 )
+  back_button:SetHeight( 20 )
+  back_button:SetWidth( 120 )
+  back_button:SetText( "Back to Import" )
+  back_button:SetScript( "OnClick", function()
+    frame:Hide()
+    on_back()
+  end )
+
+  local refresh_button = api().CreateFrame( "Button", nil, frame, "UIPanelButtonTemplate" )
+  refresh_button:SetPoint( "RIGHT", back_button, "LEFT", -10, 0 )
+  refresh_button:SetHeight( 20 )
+  refresh_button:SetWidth( 80 )
+  refresh_button:SetText( "Refresh" )
+  refresh_button:SetScript( "OnClick", function()
+    if on_refresh then on_refresh() end
+  end )
+
+  local status_label = frame:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+  status_label:SetPoint( "BOTTOMLEFT", frame, "BOTTOMLEFT", 20, 22 )
+  status_label:SetTextColor( 0.7, 0.7, 0.7, 1 )
+
+  local row_pool = {}
+  local current_rows = {}
+
+  local function acquire_row( index )
+    local row = row_pool[ index ]
+    if not row then
+      row = api().CreateFrame( "Frame", nil, scroll_child )
+      row:SetHeight( ROW_HEIGHT )
+
+      local bg = row:CreateTexture( nil, "BACKGROUND" )
+      bg:SetAllPoints()
+      row.bg = bg
+
+      local function make_cell( x, w )
+        local fs = row:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+        fs:SetPoint( "LEFT", row, "LEFT", x + 4, 0 )
+        fs:SetWidth( w - 8 )
+        fs:SetJustifyH( "LEFT" )
+        return fs
+      end
+
+      row.cell_type    = make_cell( 0,                                                        MAP_COL_TYPE )
+      row.cell_id      = make_cell( MAP_COL_TYPE,                                             MAP_COL_ID )
+      row.cell_name    = make_cell( MAP_COL_TYPE + MAP_COL_ID,                                MAP_COL_NAME )
+      row.cell_rollers = make_cell( MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME,                 MAP_COL_ROLLERS )
+      row.cell_matched = make_cell( MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME + MAP_COL_ROLLERS, MAP_COL_MATCHED )
+
+      row_pool[ index ] = row
+    end
+    return row
+  end
+
+  local function join_item_ids( item_ids )
+    if not item_ids or #item_ids == 0 then return m.colors.grey( "-" ) end
+
+    local result = {}
+    for _, item_id in ipairs( item_ids ) do
+      table.insert( result, tostring( item_id ) )
+    end
+
+    return table.concat( result, ", " )
+  end
+
+  local function render_rows()
+    local total_width = scroll_frame:GetWidth()
+
+    for i, data in ipairs( current_rows ) do
+      local row = acquire_row( i )
+      row:ClearAllPoints()
+      row:SetPoint( "TOPLEFT", scroll_child, "TOPLEFT", 0, -( (i - 1) * ROW_HEIGHT ) )
+      row:SetWidth( total_width )
+      row:Show()
+      row:EnableMouse( false )
+
+      if i % 2 == 0 then
+        row.bg:SetTexture( 0.10, 0.10, 0.10, 0.8 )
+      else
+        row.bg:SetTexture( 0.06, 0.06, 0.06, 0.8 )
+      end
+
+      local item_text = data.item_name and (m.fetch_item_link( data.item_id, data.quality ) or data.item_name) or m.colors.grey( "waiting for item cache" )
+
+      row.cell_type:SetText( data.type == "HR" and m.colors.red( "HR" ) or m.colors.blue( "SR" ) )
+      row.cell_id:SetText( tostring( data.item_id ) )
+      row.cell_name:SetText( item_text )
+      row.cell_rollers:SetText( data.rollers and tostring( data.rollers ) or m.colors.grey( "-" ) )
+      row.cell_matched:SetText( join_item_ids( data.matched_drop_item_ids ) )
+    end
+
+    for i = #current_rows + 1, #row_pool do
+      if row_pool[ i ] then row_pool[ i ]:Hide() end
+    end
+
+    scroll_child:SetHeight( math.max( 1, #current_rows * ROW_HEIGHT ) )
+    scroll_child:SetWidth( math.max( 1, total_width ) )
+    scroll_frame:UpdateScrollChildRect()
+    scroll_frame:SetVerticalScroll( 0 )
+  end
+
+  frame.populate = function( info )
+    current_rows = info and info.rows or {}
+    enabled_checkbox:SetChecked( info and info.enabled or false )
+
+    if #current_rows == 0 then
+      status_label:SetText( "No soft-reserve items imported." )
+    elseif info and info.all_resolved then
+      status_label:SetText( "Ready. Matched Drops fills in after a same-name dropped item is seen." )
+    else
+      status_label:SetText( "Some item names are still waiting for the 3.3.5a client cache." )
+    end
+
+    render_rows()
+  end
+
+  ---@diagnostic disable-next-line: undefined-global
+  table.insert( UISpecialFrames, "RollForSoftResMappingFrame" )
+  return frame
+end
+
+-- ---------------------------------------------------------------------------
 -- Module
 -- ---------------------------------------------------------------------------
 
@@ -456,6 +673,7 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
   local dirty        = false
   local import_frame
   local table_frame
+  local mapping_frame
   local fetch_retries = 0
 
   -- Build the flat sorted row list from current softres/hardres data.
@@ -628,14 +846,37 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
   -- Public API
   -- ---------------------------------------------------------------------------
 
+  local show_mapping
+
   local function ensure_import_frame()
     if import_frame then return end
     import_frame = create_import_frame( api, on_import, on_clear, on_cancel, on_dirty,
-      use_item_names, on_use_item_names_toggled )
+      use_item_names, on_use_item_names_toggled, function() show_mapping() end )
+  end
+
+  show_mapping = function()
+    ensure_import_frame()
+
+    if not mapping_frame then
+      mapping_frame = create_mapping_frame( api, function()
+        import_frame:Show()
+        import_frame.editbox:SetText( softres_data_encoded or "" )
+      end, use_item_names, on_use_item_names_toggled, function() show_mapping() end )
+    end
+
+    if table_frame then table_frame:Hide() end
+    import_frame:Hide()
+    mapping_frame.populate( unfiltered_softres.get_name_mapping_info() )
+    mapping_frame:Show()
   end
 
   local function toggle()
     ensure_import_frame()
+
+    if mapping_frame and mapping_frame:IsVisible() then
+      mapping_frame:Hide()
+      return
+    end
 
     if table_frame and table_frame:IsVisible() then
       table_frame:Hide()
@@ -673,9 +914,10 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
   end
 
   return {
-    toggle = toggle,
-    load   = load,
-    clear  = clear,
+    toggle       = toggle,
+    show_mapping = show_mapping,
+    load         = load,
+    clear        = clear,
   }
 end
 
