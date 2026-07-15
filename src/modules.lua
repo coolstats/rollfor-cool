@@ -175,7 +175,7 @@ function M.pretty_print( message, color_fn, module_name )
   local module_str = module_name and string.format( "%s%s%s", c( " [" ), M.colors.white( module_name ), c( "]" ) ) or ""
 
   local frame = M.api.DEFAULT_CHAT_FRAME
-  if frame then frame:AddMessage( string.format( "%s%s: %s", c( "RollFor" ), module_str, message ) ) end
+  if frame then frame:AddMessage( string.format( "%s%s: %s", c( "rollfor_cool" ), module_str, message ) ) end
 end
 
 function M.err( message, module_name )

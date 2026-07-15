@@ -1,5 +1,5 @@
 ## Interface: 30300
-## Title: RollFor Cool
+## Title: |cff209ff9rollfor_cool|r
 ## Author: coolstats
 ## Version: 1.0.15
 ## Notes: Automated item rolling with softres.it support and 3.3.5a Trial of the Crusader heroic name matching.

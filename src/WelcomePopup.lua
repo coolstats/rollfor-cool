@@ -70,7 +70,7 @@ function M.new( frame_builder, ace_timer, db )
       return label
     end
 
-    local header = create_label( frame, string.format( "%s", blue( "RollFor" ) ) )
+    local header = create_label( frame, string.format( "%s", blue( "rollfor_cool" ) ) )
     header:SetPoint( "TOP", 0, -9 )
 
     frame.new_line = function()

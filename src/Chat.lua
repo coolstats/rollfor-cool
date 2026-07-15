@@ -39,7 +39,7 @@ function M.new( api, group_roster, player_info )
     local module_str = module_name and string.format( "%s%s%s", c( " [" ), m.colors.white( module_name ), c( "]" ) ) or ""
 
     local frame = api.DEFAULT_CHAT_FRAME
-    if frame then frame:AddMessage( string.format( "%s%s: %s", c( "RollFor" ), module_str, message ) ) end
+    if frame then frame:AddMessage( string.format( "%s%s: %s", c( "rollfor_cool" ), module_str, message ) ) end
   end
 
   ---@type Chat

@@ -200,7 +200,7 @@ local function show( module_names )
     return string.format(
       "Debug messages %s (%s %s):",
       tag,
-      m.colors.blue( "RollFor" ),
+      m.colors.blue( "rollfor_cool" ),
       m.colors.hl( "v" .. m.get_addon_version().str )
     )
   end

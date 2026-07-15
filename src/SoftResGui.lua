@@ -218,7 +218,7 @@ local function create_import_frame( api, on_import, on_clear, on_cancel, on_dirt
     sr_website = "softres.it"
   end
 
-  label:SetText( string.format( "%s      %s %s", m.colors.blue( "RollFor" ), hl( sr_website ), "data import" ) )
+  label:SetText( string.format( "%s      %s %s", m.colors.blue( "rollfor_cool" ), hl( sr_website ), "data import" ) )
 
   ---@diagnostic disable-next-line: undefined-global
   table.insert( UISpecialFrames, "RollForSoftResLootFrame" )
@@ -249,7 +249,7 @@ local function create_table_frame( api, on_back )
   local title = frame:CreateFontString( nil, "OVERLAY", "GameFontNormal" )
   title:SetPoint( "TOPLEFT", frame, "TOPLEFT", 20, -14 )
   title:SetTextColor( 1, 1, 1, 1 )
-  title:SetText( string.format( "%s  —  Soft / Hard Reserves", m.colors.blue( "RollFor" ) ) )
+  title:SetText( string.format( "%s  -  Soft / Hard Reserves", m.colors.blue( "rollfor_cool" ) ) )
 
   -- Inner backdrop for the table area
   local inner = m.create_backdrop_frame( api(), "Frame", nil, frame )

@@ -72,7 +72,7 @@ function M.new( popup_builder, awarded_loot, version_broadcast, event_bus, confi
       frame:border_color( .2, .2, .2, 1 )
     end
 
-    local title_bar = m.GuiElements.titlebar( frame, blue( "RollFor" ) )
+    local title_bar = m.GuiElements.titlebar( frame, blue( "rollfor_cool" ) )
     title_bar.title:SetJustifyH( "LEFT" )
 
     local help_btn = m.GuiElements.tiny_button( frame, "?", "Click this icon and then hover over a field for more information.", "#E6CC40" )
@@ -101,7 +101,7 @@ function M.new( popup_builder, awarded_loot, version_broadcast, event_bus, confi
       this.title:SetPoint( "TOPLEFT", 0, -20 )
       this.title:SetPoint( "RIGHT", this.parent, "RIGHT", 0, 0 )
       this.title:SetJustifyH( "CENTER" )
-      this.title:SetText( blue( "RollFor" ) )
+      this.title:SetText( blue( "rollfor_cool" ) )
 
       this.versionc = this:CreateFontString( "Status", "LOW", "GameFontWhite" )
       this.versionc:SetPoint( "TOPLEFT", 140, -50 )

@@ -90,7 +90,7 @@ function M.new( api, db, manage_softres_fn, winners_popup_fn, options_popup_fn, 
 
       if not self.dragging then
         api().GameTooltip:SetOwner( self, "ANCHOR_LEFT" )
-        api().GameTooltip:SetText( blue( "RollFor" ) )
+        api().GameTooltip:SetText( blue( "rollfor_cool" ) )
 
         api().GameTooltip:AddLine( " " )
         api().GameTooltip:AddLine( string.format( "%s - %s", hl( "/htr" ), white( "show how to roll" ) ) )

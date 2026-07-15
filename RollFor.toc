@@ -1,5 +1,5 @@
 ## Interface: 11200
-## Title: RollFor
+## Title: |cff209ff9rollfor_cool|r
 ## Author: coolstats
 ## Version: 4.8.2
 ## Notes: An automated item roller with soft-reserve support.

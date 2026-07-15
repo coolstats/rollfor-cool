@@ -1,6 +1,6 @@
-# RollFor Cool
+# rollfor_cool
 
-RollFor Cool is a Wrath of the Lich King 3.3.5a addon for running loot rolls with soft-reserve support. This port is aimed at Warmane-style WotLK raids and imports soft-reserve data from softres.it Gargul exports.
+rollfor_cool is a Wrath of the Lich King 3.3.5a addon for running loot rolls with soft-reserve support. This port is aimed at Warmane-style WotLK raids and imports soft-reserve data from softres.it Gargul exports.
 
 ## Features
 

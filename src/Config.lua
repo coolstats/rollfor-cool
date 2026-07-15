@@ -149,7 +149,7 @@ function M.new( db, event_bus )
   end
 
   local function print_settings()
-    print_header( "RollFor Configuration" )
+    print_header( "rollfor_cool Configuration" )
     print_default_rolling_time()
     print_master_loot_frame_rows()
     print_roll_thresholds()
@@ -169,7 +169,7 @@ function M.new( db, event_bus )
   end
 
   local function print_client_settings()
-    print_header( "RollFor Client Configuration" )
+    print_header( "rollfor_cool Client Configuration" )
     print_client_roll()
 
     for toggle_key, setting in pairs( toggles ) do
@@ -185,7 +185,7 @@ function M.new( db, event_bus )
     local v = function( name ) return string.format( "%s%s%s", hl( "<" ), grey( name ), hl( ">" ) ) end
     local function rfc( cmd ) return string.format( "%s%s", blue( "/rf config client" ), cmd and string.format( " %s", hl( cmd ) ) or "" ) end
 
-    print_header( "RollFor Client Configuration Help" )
+    print_header( "rollfor_cool Client Configuration Help" )
     m.print( string.format( "%s - show configuration", rfc() ) )
     m.print( string.format( "%s %s - set when to show roll popup", rfc( "show-roll" ), v( "Off|Always|Eligible" ) ) )
 
@@ -299,7 +299,7 @@ function M.new( db, event_bus )
     local v = function( name ) return string.format( "%s%s%s", hl( "<" ), grey( name ), hl( ">" ) ) end
     local function rfc( cmd ) return string.format( "%s%s", blue( "/rf config" ), cmd and string.format( " %s", hl( cmd ) ) or "" ) end
 
-    print_header( "RollFor Configuration Help" )
+    print_header( "rollfor_cool Configuration Help" )
     m.print( string.format( "%s - show configuration", rfc() ) )
     m.print( string.format( "%s - toggle minimap icon", rfc( "minimap" ) ) )
     m.print( string.format( "%s - lock/unlock minimap icon", rfc( "minimap lock" ) ) )

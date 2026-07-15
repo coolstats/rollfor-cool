@@ -5,7 +5,7 @@ if m.KeyBindings then return end
 
 local M = {}
 
-BINDING_HEADER_ROLLFOR = "RollFor"
+BINDING_HEADER_ROLLFOR = "|cff209ff9rollfor_cool|r"
 
 ---@class KeyBindings
 ---@field options_toggle fun()
