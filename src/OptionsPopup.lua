@@ -130,65 +130,6 @@ function M.new( popup_builder, awarded_loot, version_broadcast, event_bus, confi
       this.info:SetJustifyH( "CENTER" )
       this.info:SetText( "Check the minimap icon for new commands.\n\nBe a responsible Master Looter.\n\nHappy rolling! o7" )
 
-      this.changelog_title = this:CreateFontString( "Status", "LOW", "GameFontWhite" )
-      this.changelog_title:SetPoint( "TOPLEFT", 8, -169 )
-      this.changelog_title:SetPoint( "RIGHT", this.parent, "RIGHT", 0, 0 )
-      this.changelog_title:SetJustifyH( "LEFT" )
-      this.changelog_title:SetText( "Changelog:" )
-
-      this.changelog = e.create_scroll_frame( this.parent )
-      e.create_backdrop( this.changelog, 3 )
-      this.changelog:SetPoint( "TOPLEFT", this.parent, "TOPLEFT", 10, -186 )
-      this.changelog:SetPoint( "BOTTOMRIGHT", this.parent, "BOTTOMRIGHT", -10, 10 )
-
-      this.changelog.content = e.create_scroll_child( this.changelog )
-      this.changelog.content.parent = this.changelog
-
-      local changelog = {
-        { ver = "4.8.1", text = "Add new MC bosses to boss list. Refactor keybindings" },
-        { ver = "4.8.0", text = "Added +1 handling" },
-        { ver = "4.7.13", text = "Add option to show player roles in rolling popup." },
-        { ver = "4.7.13", text = "Fix wrong zone name for Temple of Ahn'Qiraj." },
-        { ver = "4.7.12", text = "Fix trade bug outside raid. Fix minor bug in options window." },
-        { ver = "4.7.11", text = "Fix bug in winners popup." },
-        { ver = "4.7.10", text = "/src a[nnounce] command now supports /src aw for raid warning." },
-        { ver = "4.7.9", text = "Made auto name matcher case insensitive. Tiny improvement to tooltip reader." },
-        { ver = "4.7.8", text = "Adjust positioning of client roll popup so it aligns to bottom" },
-        { ver = "4.7.7", text = "Add key bindings to toggle options, winners and SR import windows" },
-        { ver = "4.7.7", text = "Add changelog to options window" },
-        { ver = "4.7.7", text = "Add client settings to options window" },
-        { ver = "4.7.7", text = "Add client option to auto-roll on SR items" },
-        { ver = "4.7.7", text = "Add Emerald Sanctum bosses to boss list" },
-        { ver = "4.7.7", text = "New options for quick awarding items" },
-        { ver = "4.7.7", text = "/src announce will announce SR link and players who are missing SR" },
-        { ver = "4.7.6", text = "Refactoring of some GUI elements" },
-        { ver = "4.7.5", text = "New options GUI" },
-        { ver = "4.7.4", text = "Add option to modify rolltype in winners window" },
-        { ver = "4.7.3", text = "Fix rare class colorization bug caused by other addons" },
-        { ver = "4.7.2", text = "New option to position loot frame at cursor" },
-        { ver = "4.7.1", text = "New option to automatically disable tmog roll on trash loot" },
-        { ver = "4.7.0", text = "Add roll popup for clients" },
-        { ver = "4.6.9", text = "New options to auto announce classes on items with class restrictions" },
-        { ver = "4.6.8", text = "New winners GUI to display awarded items" },
-        { ver = "4.6.8", text = "Track raid trades so correct winner is displayed in winners window" }
-      }
-
-      local last_ver
-      for i, entry in ipairs( changelog ) do
-        if last_ver ~= entry.ver then
-          local ver = this.changelog.content:CreateFontString( "Status", "LOW", "GameFontWhite" )
-          ver:SetJustifyH( "LEFT" )
-          ver:SetPoint( "TOPLEFT", this.changelog.content, "TOPLEFT", 0, -(i - 1) * 14 )
-          ver:SetText( entry.ver )
-        end
-
-        local text = this.changelog.content:CreateFontString( "Status", "LOW", "GameFontWhite" )
-        text:SetJustifyH( "LEFT" )
-        text:SetPoint( "TOPLEFT", this.changelog.content, "TOPLEFT", 30, -(i - 1) * 14 )
-        text:SetPoint( "RIGHT", this.changelog.content, "LEFT", 350, 0 )
-        text:SetText( entry.text )
-        last_ver = entry.ver
-      end
     end )
 
     e.create_gui_entry( "General", frames, function()
