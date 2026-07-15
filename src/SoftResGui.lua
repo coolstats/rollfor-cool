@@ -32,10 +32,11 @@ local control_backdrop = {
 local TABLE_FRAME_WIDTH  = 780
 local TABLE_FRAME_HEIGHT = 540
 
-local COL_PLAYER = 160
-local COL_ITEM   = 280
-local COL_TYPE   = 80
-local COL_SRPLUS = 80
+local COL_PLAYER = 140
+local COL_ITEM   = 245
+local COL_MATCH  = 245
+local COL_TYPE   = 50
+local COL_SRPLUS = 45
 
 local MAP_COL_TYPE       = 45
 local MAP_COL_RESERVE_ID = 80
@@ -245,7 +246,7 @@ end
 -- Table frame
 -- ---------------------------------------------------------------------------
 
-local function create_table_frame( api, on_back )
+local function create_table_frame( api, on_back, use_item_names, on_use_item_names_toggled, on_refresh )
   local frame = m.create_backdrop_frame( api(), "Frame", "RollForSoftResTableFrame", UIParent )
   frame:Hide()
   frame:SetWidth( TABLE_FRAME_WIDTH )
@@ -266,6 +267,21 @@ local function create_table_frame( api, on_back )
   title:SetPoint( "TOPLEFT", frame, "TOPLEFT", 20, -14 )
   title:SetTextColor( 1, 1, 1, 1 )
   title:SetText( string.format( "%s  -  Soft / Hard Reserves", m.colors.blue( "rollfor_cool" ) ) )
+
+  local enabled_checkbox = api().CreateFrame( "CheckButton", nil, frame, "UICheckButtonTemplate" )
+  enabled_checkbox:SetWidth( 20 )
+  enabled_checkbox:SetHeight( 20 )
+  enabled_checkbox:SetPoint( "TOPLEFT", frame, "TOPLEFT", 430, -9 )
+  enabled_checkbox:SetScript( "OnClick", function()
+    local checked = enabled_checkbox:GetChecked() and true or false
+    if on_use_item_names_toggled then on_use_item_names_toggled( checked ) end
+    if on_refresh then on_refresh() end
+  end )
+
+  local enabled_label = frame:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+  enabled_label:SetPoint( "LEFT", enabled_checkbox, "RIGHT", 0, 1 )
+  enabled_label:SetTextColor( 1, 1, 1, 1 )
+  enabled_label:SetText( "Heroic item matching" )
 
   -- Inner backdrop for the table area
   local inner = m.create_backdrop_frame( api(), "Frame", nil, frame )
@@ -293,10 +309,11 @@ local function create_table_frame( api, on_back )
     fs:SetText( m.colors.white( label ) )
   end
 
-  make_header_cell( "Player", 0,                                     COL_PLAYER )
-  make_header_cell( "Item",   COL_PLAYER,                            COL_ITEM )
-  make_header_cell( "Type",   COL_PLAYER + COL_ITEM,                 COL_TYPE )
-  make_header_cell( "SR+",    COL_PLAYER + COL_ITEM + COL_TYPE,      COL_SRPLUS )
+  make_header_cell( "Player",        0,                                             COL_PLAYER )
+  make_header_cell( "Reserved Item", COL_PLAYER,                                    COL_ITEM )
+  make_header_cell( "Heroic Match",  COL_PLAYER + COL_ITEM,                         COL_MATCH )
+  make_header_cell( "Type",          COL_PLAYER + COL_ITEM + COL_MATCH,             COL_TYPE )
+  make_header_cell( "SR+",           COL_PLAYER + COL_ITEM + COL_MATCH + COL_TYPE,  COL_SRPLUS )
 
   -- Scroll frame for rows
   local scroll_frame = api().CreateFrame( "ScrollFrame", "RollForSRTableScroll", inner, "UIPanelScrollFrameTemplate" )
@@ -349,14 +366,50 @@ local function create_table_frame( api, on_back )
         return fs
       end
 
-      row.cell_player = make_cell( 0,                                  COL_PLAYER )
-      row.cell_item   = make_cell( COL_PLAYER,                         COL_ITEM )
-      row.cell_type   = make_cell( COL_PLAYER + COL_ITEM,              COL_TYPE )
-      row.cell_srplus = make_cell( COL_PLAYER + COL_ITEM + COL_TYPE,   COL_SRPLUS )
+      local function make_item_cell( x, w )
+        local button = api().CreateFrame( "Button", nil, row )
+        button:SetPoint( "LEFT", row, "LEFT", x + 4, 0 )
+        button:SetWidth( w - 8 )
+        button:SetHeight( ROW_HEIGHT )
+        button:EnableMouse( true )
+
+        local fs = button:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+        fs:SetPoint( "LEFT", button, "LEFT", 0, 0 )
+        fs:SetWidth( w - 8 )
+        fs:SetJustifyH( "LEFT" )
+        button.text = fs
+
+        button:SetScript( "OnEnter", function( self )
+          if not self.item_id then return end
+          api().GameTooltip:SetOwner( self, "ANCHOR_RIGHT" )
+          api().GameTooltip:SetHyperlink( string.format( "item:%s:0:0:0:0:0:0:0", self.item_id ) )
+          api().GameTooltip:Show()
+        end )
+        button:SetScript( "OnLeave", function() api().GameTooltip:Hide() end )
+
+        return button
+      end
+
+      row.cell_player = make_cell( 0,                                             COL_PLAYER )
+      row.cell_item   = make_item_cell( COL_PLAYER,                               COL_ITEM )
+      row.cell_match  = make_item_cell( COL_PLAYER + COL_ITEM,                    COL_MATCH )
+      row.cell_type   = make_cell( COL_PLAYER + COL_ITEM + COL_MATCH,             COL_TYPE )
+      row.cell_srplus = make_cell( COL_PLAYER + COL_ITEM + COL_MATCH + COL_TYPE,  COL_SRPLUS )
 
       row_pool[ index ] = row
     end
     return row
+  end
+
+  local function item_text( item_id, item_link, item_name, empty_text )
+    if not item_id then return m.colors.grey( empty_text or "-" ) end
+    return string.format( "%s %s", m.colors.grey( tostring( item_id ) ), item_link or item_name or m.colors.grey( "waiting" ) )
+  end
+
+  local function set_item_cell( cell, item_id, item_link, item_name, empty_text )
+    cell.item_id = item_id
+    cell:EnableMouse( item_id ~= nil )
+    cell.text:SetText( item_text( item_id, item_link, item_name, empty_text ) )
   end
 
   local function render_rows()
@@ -374,11 +427,12 @@ local function create_table_frame( api, on_back )
       toggle_row:EnableMouse( true )
 
       toggle_row.bg:SetTexture( 0.20, 0.08, 0.08, 1 )
-      toggle_row.cell_player:SetWidth( COL_PLAYER + COL_ITEM + COL_TYPE + COL_SRPLUS - 8 )
+      toggle_row.cell_player:SetWidth( COL_PLAYER + COL_ITEM + COL_MATCH + COL_TYPE + COL_SRPLUS - 8 )
       toggle_row.cell_player:SetText( string.format( "%s  %s",
         m.colors.red( string.format( "Hard Reserves (%d)", #last_hr_rows ) ),
         hr_collapsed and m.colors.grey( "[+]" ) or m.colors.grey( "[-]" ) ) )
-      toggle_row.cell_item:SetText( "" )
+      set_item_cell( toggle_row.cell_item, nil )
+      set_item_cell( toggle_row.cell_match, nil )
       toggle_row.cell_type:SetText( "" )
       toggle_row.cell_srplus:SetText( "" )
 
@@ -399,13 +453,12 @@ local function create_table_frame( api, on_back )
           row:EnableMouse( false )
 
           row.bg:SetTexture( 0.25, 0.10, 0.10, 1 )
-          row.cell_player:SetWidth( COL_PLAYER + COL_ITEM + COL_TYPE + COL_SRPLUS - 8 )
-          row.cell_player:SetText( string.format( "%s  —  %s",
-            data.item_link or m.colors.grey( tostring( data.item_id ) ),
-            m.colors.red( "Hard Reserved" ) ) )
-          row.cell_item:SetText( "" )
-          row.cell_type:SetText( "" )
-          row.cell_srplus:SetText( "" )
+          row.cell_player:SetWidth( COL_PLAYER - 8 )
+          row.cell_player:SetText( "" )
+          set_item_cell( row.cell_item, data.item_id, data.item_link )
+          set_item_cell( row.cell_match, nil, nil, nil, "hard reserved" )
+          row.cell_type:SetText( m.colors.red( "HR" ) )
+          row.cell_srplus:SetText( m.colors.grey( "-" ) )
         end
       end
     end
@@ -430,7 +483,8 @@ local function create_table_frame( api, on_back )
 
       row.cell_player:SetWidth( COL_PLAYER - 8 )
       row.cell_player:SetText( data.player_text or "" )
-      row.cell_item:SetText( data.item_link or m.colors.grey( tostring( data.item_id ) ) )
+      set_item_cell( row.cell_item, data.item_id, data.item_link )
+      set_item_cell( row.cell_match, data.matched_item_id, data.matched_item_link, data.matched_item_name, "normal/no match" )
       row.cell_type:SetText( m.colors.blue( "SR" ) )
       row.cell_srplus:SetText( data.sr_plus and tostring( data.sr_plus ) or m.colors.grey( "—" ) )
     end
@@ -452,6 +506,7 @@ local function create_table_frame( api, on_back )
     last_hr_rows = hr_rows
     last_sr_rows = sr_rows
     hr_collapsed = true
+    if use_item_names then enabled_checkbox:SetChecked( use_item_names.is_enabled() ) end
     render_rows()
   end
 
@@ -716,6 +771,28 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
       needs_refetch = true
     end
 
+    local function build_heroic_match_map()
+      local result = {}
+      local info = unfiltered_softres.get_name_mapping_info and unfiltered_softres.get_name_mapping_info()
+
+      for _, row in ipairs( info and info.rows or {} ) do
+        if row.type == "SR" and row.matched_item_id and not result[ row.reserve_item_id ] then
+          local matched_item_link = m.fetch_item_link( row.matched_item_id )
+          if not matched_item_link and fetch_retries < MAX_RETRIES then touch( row.matched_item_id ) end
+
+          result[ row.reserve_item_id ] = {
+            item_id = row.matched_item_id,
+            item_name = row.matched_item_name,
+            item_link = matched_item_link
+          }
+        end
+      end
+
+      return result
+    end
+
+    local heroic_matches = build_heroic_match_map()
+
     -- HR rows
     for _, item_id in ipairs( unfiltered_softres.get_hr_item_ids() ) do
       local quality   = unfiltered_softres.get_item_quality( item_id )
@@ -752,6 +829,7 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
     for _, pair in ipairs( sr_pairs ) do
       local item_link = m.fetch_item_link( pair.item_id, pair.quality )
       if not item_link and fetch_retries < MAX_RETRIES then touch( pair.item_id ) end
+      local heroic_match = heroic_matches[ pair.item_id ]
 
       local player_text = pair.name
       if group_roster then
@@ -765,6 +843,9 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
         player_text = player_text,
         item_id     = pair.item_id,
         item_link   = item_link,
+        matched_item_id = heroic_match and heroic_match.item_id or nil,
+        matched_item_name = heroic_match and heroic_match.item_name or nil,
+        matched_item_link = heroic_match and heroic_match.item_link or nil,
         sr_plus     = pair.sr_plus,
       } )
     end
@@ -780,7 +861,7 @@ function M.new( api, import_encoded_softres_data, softres_check, softres, clear_
         -- "Back to Import" pressed
         import_frame:Show()
         import_frame.editbox:SetText( softres_data_encoded or "" )
-      end )
+      end, use_item_names, on_use_item_names_toggled, function() show_table( false ) end )
     end
 
     local hr_rows, sr_rows, needs_refetch = build_rows()
