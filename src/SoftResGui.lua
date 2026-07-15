@@ -37,11 +37,12 @@ local COL_ITEM   = 280
 local COL_TYPE   = 80
 local COL_SRPLUS = 80
 
-local MAP_COL_TYPE    = 55
-local MAP_COL_ID      = 85
-local MAP_COL_NAME    = 330
-local MAP_COL_ROLLERS = 70
-local MAP_COL_MATCHED = 210
+local MAP_COL_TYPE       = 45
+local MAP_COL_RESERVE_ID = 80
+local MAP_COL_RESERVE    = 240
+local MAP_COL_MATCH_ID   = 80
+local MAP_COL_MATCH      = 240
+local MAP_COL_ROLLERS    = 55
 
 local ROW_HEIGHT    = 18
 local HEADER_HEIGHT = 22
@@ -526,11 +527,12 @@ local function create_mapping_frame( api, on_back, use_item_names, on_use_item_n
     fs:SetText( m.colors.white( label ) )
   end
 
-  make_header_cell( "Type",          0,                                                                 MAP_COL_TYPE )
-  make_header_cell( "Reserve ID",    MAP_COL_TYPE,                                                      MAP_COL_ID )
-  make_header_cell( "Matching Name", MAP_COL_TYPE + MAP_COL_ID,                                         MAP_COL_NAME )
-  make_header_cell( "Rollers",       MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME,                          MAP_COL_ROLLERS )
-  make_header_cell( "Matched Drops", MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME + MAP_COL_ROLLERS,        MAP_COL_MATCHED )
+  make_header_cell( "Type",          0,                                                                                     MAP_COL_TYPE )
+  make_header_cell( "Reserve ID",    MAP_COL_TYPE,                                                                          MAP_COL_RESERVE_ID )
+  make_header_cell( "Reserved Item", MAP_COL_TYPE + MAP_COL_RESERVE_ID,                                                     MAP_COL_RESERVE )
+  make_header_cell( "Match ID",      MAP_COL_TYPE + MAP_COL_RESERVE_ID + MAP_COL_RESERVE,                                   MAP_COL_MATCH_ID )
+  make_header_cell( "Matched Item",  MAP_COL_TYPE + MAP_COL_RESERVE_ID + MAP_COL_RESERVE + MAP_COL_MATCH_ID,                MAP_COL_MATCH )
+  make_header_cell( "Rollers",       MAP_COL_TYPE + MAP_COL_RESERVE_ID + MAP_COL_RESERVE + MAP_COL_MATCH_ID + MAP_COL_MATCH, MAP_COL_ROLLERS )
 
   local scroll_frame = api().CreateFrame( "ScrollFrame", "RollForSRMappingScroll", inner, "UIPanelScrollFrameTemplate" )
   scroll_frame:SetPoint( "TOPLEFT",     header_bar, "BOTTOMLEFT",  0,   -2 )
@@ -585,26 +587,53 @@ local function create_mapping_frame( api, on_back, use_item_names, on_use_item_n
         return fs
       end
 
-      row.cell_type    = make_cell( 0,                                                        MAP_COL_TYPE )
-      row.cell_id      = make_cell( MAP_COL_TYPE,                                             MAP_COL_ID )
-      row.cell_name    = make_cell( MAP_COL_TYPE + MAP_COL_ID,                                MAP_COL_NAME )
-      row.cell_rollers = make_cell( MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME,                 MAP_COL_ROLLERS )
-      row.cell_matched = make_cell( MAP_COL_TYPE + MAP_COL_ID + MAP_COL_NAME + MAP_COL_ROLLERS, MAP_COL_MATCHED )
+      local function make_item_cell( x, w )
+        local button = api().CreateFrame( "Button", nil, row )
+        button:SetPoint( "LEFT", row, "LEFT", x + 4, 0 )
+        button:SetWidth( w - 8 )
+        button:SetHeight( ROW_HEIGHT )
+        button:EnableMouse( true )
+
+        local fs = button:CreateFontString( nil, "OVERLAY", "GameFontNormalSmall" )
+        fs:SetPoint( "LEFT", button, "LEFT", 0, 0 )
+        fs:SetWidth( w - 8 )
+        fs:SetJustifyH( "LEFT" )
+        button.text = fs
+
+        button:SetScript( "OnEnter", function( self )
+          if not self.item_id then return end
+          api().GameTooltip:SetOwner( self, "ANCHOR_RIGHT" )
+          api().GameTooltip:SetHyperlink( string.format( "item:%s:0:0:0:0:0:0:0", self.item_id ) )
+          api().GameTooltip:Show()
+        end )
+        button:SetScript( "OnLeave", function() api().GameTooltip:Hide() end )
+
+        return button
+      end
+
+      row.cell_type       = make_cell( 0,                                                                                     MAP_COL_TYPE )
+      row.cell_reserve_id = make_cell( MAP_COL_TYPE,                                                                          MAP_COL_RESERVE_ID )
+      row.cell_reserve    = make_item_cell( MAP_COL_TYPE + MAP_COL_RESERVE_ID,                                                MAP_COL_RESERVE )
+      row.cell_match_id   = make_cell( MAP_COL_TYPE + MAP_COL_RESERVE_ID + MAP_COL_RESERVE,                                   MAP_COL_MATCH_ID )
+      row.cell_match      = make_item_cell( MAP_COL_TYPE + MAP_COL_RESERVE_ID + MAP_COL_RESERVE + MAP_COL_MATCH_ID,           MAP_COL_MATCH )
+      row.cell_rollers    = make_cell( MAP_COL_TYPE + MAP_COL_RESERVE_ID + MAP_COL_RESERVE + MAP_COL_MATCH_ID + MAP_COL_MATCH, MAP_COL_ROLLERS )
 
       row_pool[ index ] = row
     end
     return row
   end
 
-  local function join_item_ids( item_ids )
-    if not item_ids or #item_ids == 0 then return m.colors.grey( "-" ) end
+  local function set_item_cell( cell, item_id, quality, item_name, empty_text )
+    cell.item_id = item_id
+    cell:EnableMouse( item_id ~= nil )
 
-    local result = {}
-    for _, item_id in ipairs( item_ids ) do
-      table.insert( result, tostring( item_id ) )
+    if not item_id then
+      cell.text:SetText( m.colors.grey( empty_text or "-" ) )
+      return
     end
 
-    return table.concat( result, ", " )
+    local item_text = m.fetch_item_link( item_id, quality ) or item_name or m.colors.grey( "waiting for item cache" )
+    cell.text:SetText( item_text )
   end
 
   local function render_rows()
@@ -624,13 +653,12 @@ local function create_mapping_frame( api, on_back, use_item_names, on_use_item_n
         row.bg:SetTexture( 0.06, 0.06, 0.06, 0.8 )
       end
 
-      local item_text = data.item_name and (m.fetch_item_link( data.item_id, data.quality ) or data.item_name) or m.colors.grey( "waiting for item cache" )
-
       row.cell_type:SetText( data.type == "HR" and m.colors.red( "HR" ) or m.colors.blue( "SR" ) )
-      row.cell_id:SetText( tostring( data.item_id ) )
-      row.cell_name:SetText( item_text )
+      row.cell_reserve_id:SetText( tostring( data.reserve_item_id ) )
+      set_item_cell( row.cell_reserve, data.reserve_item_id, data.reserve_quality, data.reserve_item_name )
+      row.cell_match_id:SetText( data.matched_item_id and tostring( data.matched_item_id ) or m.colors.grey( "-" ) )
+      set_item_cell( row.cell_match, data.matched_item_id, nil, data.matched_item_name, "not seen yet" )
       row.cell_rollers:SetText( data.rollers and tostring( data.rollers ) or m.colors.grey( "-" ) )
-      row.cell_matched:SetText( join_item_ids( data.matched_drop_item_ids ) )
     end
 
     for i = #current_rows + 1, #row_pool do
@@ -650,7 +678,7 @@ local function create_mapping_frame( api, on_back, use_item_names, on_use_item_n
     if #current_rows == 0 then
       status_label:SetText( "No soft-reserve items imported." )
     elseif info and info.all_resolved then
-      status_label:SetText( "Ready. Matched Drops fills in after a same-name dropped item is seen." )
+      status_label:SetText( "Ready. Matched Item fills in after a same-name dropped item is seen." )
     else
       status_label:SetText( "Some item names are still waiting for the 3.3.5a client cache." )
     end

@@ -367,12 +367,15 @@ function M.new( db, use_item_names, ace_timer )
     for dropped_item_id, match in pairs( history ) do
       for _, source_item_id in ipairs( match.matched_item_ids or {} ) do
         result[ source_item_id ] = result[ source_item_id ] or {}
-        table.insert( result[ source_item_id ], dropped_item_id )
+        table.insert( result[ source_item_id ], {
+          item_id = dropped_item_id,
+          item_name = match.name
+        } )
       end
     end
 
-    for _, item_ids in pairs( result ) do
-      table.sort( item_ids )
+    for _, matches in pairs( result ) do
+      table.sort( matches, function( left, right ) return left.item_id < right.item_id end )
     end
 
     return result
@@ -386,14 +389,26 @@ function M.new( db, use_item_names, ace_timer )
       local name = get_item_name( item_id, item )
       if not name then all_resolved = false end
 
-      table.insert( rows, {
-        type = reserve_type,
-        item_id = item_id,
-        item_name = name,
-        quality = item.quality,
-        rollers = item.rollers and #item.rollers or nil,
-        matched_drop_item_ids = history_by_source[ item_id ] or {}
-      } )
+      local function add_row( matched_item )
+        table.insert( rows, {
+          type = reserve_type,
+          reserve_item_id = item_id,
+          reserve_item_name = name,
+          reserve_quality = item.quality,
+          rollers = item.rollers and #item.rollers or nil,
+          matched_item_id = matched_item and matched_item.item_id or nil,
+          matched_item_name = matched_item and matched_item.item_name or nil
+        } )
+      end
+
+      local matched_items = history_by_source[ item_id ]
+      if matched_items and matched_items[ 1 ] then
+        for _, matched_item in ipairs( matched_items ) do
+          add_row( matched_item )
+        end
+      else
+        add_row()
+      end
     end
 
     return all_resolved
@@ -406,10 +421,11 @@ function M.new( db, use_item_names, ace_timer )
 
     table.sort( rows, function( left, right )
       if left.type ~= right.type then return left.type > right.type end
-      local left_name = left.item_name or ""
-      local right_name = right.item_name or ""
+      local left_name = left.reserve_item_name or ""
+      local right_name = right.reserve_item_name or ""
       if left_name ~= right_name then return left_name < right_name end
-      return left.item_id < right.item_id
+      if left.reserve_item_id ~= right.reserve_item_id then return left.reserve_item_id < right.reserve_item_id end
+      return (left.matched_item_id or 0) < (right.matched_item_id or 0)
     end )
 
     return {

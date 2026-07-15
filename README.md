@@ -34,7 +34,7 @@ The `Heroic item matching` option is enabled by default. Keep it enabled for Tri
 
 This port does not ship a WotLK Classic/re-release item-ID table. For original 3.3.5a/Warmane compatibility, it uses item names from the softres.it export when available and falls back to the running 30300 client's `GetItemInfo` cache for any IDs that need to be resolved.
 
-Open `/srm` to inspect the heroic matching panel. Before a heroic drop is seen, it shows the imported reserve IDs and matching names. After a same-named dropped item is matched, the panel records that dropped item ID under `Matched Drops`.
+Open `/srm` to inspect the heroic matching panel. It shows the imported reserve item and ID next to the matched dropped item and ID. Hover either item in the panel to inspect its in-game tooltip.
 
 ## Commands
 
