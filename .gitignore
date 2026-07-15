@@ -1,5 +1,6 @@
 *.bak
 *.tmp
 *.zip
+TODO.md
 .DS_Store
 Thumbs.db
