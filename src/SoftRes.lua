@@ -11,6 +11,13 @@ local lib_stub = LibStub
 local keys = m.keys
 local transform = m.SoftResDataTransformer.transform
 
+-- Original Wrath 3.3.5 Trial of the Grand Crusader heroic item ID bands.
+-- The client is still asked for each item's name before a match is trusted.
+local TOGC_HEROIC_ITEM_ID_RANGES = {
+  { 47412, 47561 }, -- 25-player heroic / tribute items
+  { 47913, 48030 }  -- 10-player heroic / tribute items
+}
+
 ---@class UseItemNames
 ---@field is_enabled fun(): boolean
 ---@field set_enabled fun( value: boolean )
@@ -381,7 +388,77 @@ function M.new( db, use_item_names, ace_timer )
     return result
   end
 
-  local function add_name_mapping_rows( rows, reserve_type, data, match_history )
+  local function add_match( result, source_item_id, matched_item )
+    result[ source_item_id ] = result[ source_item_id ] or {}
+
+    for _, existing in ipairs( result[ source_item_id ] ) do
+      if existing.item_id == matched_item.item_id then return end
+    end
+
+    table.insert( result[ source_item_id ], matched_item )
+  end
+
+  local function add_expected_matches( result, name_index )
+    for _, range in ipairs( TOGC_HEROIC_ITEM_ID_RANGES ) do
+      for candidate_item_id = range[ 1 ], range[ 2 ] do
+        local candidate_name = m.api.GetItemInfo( candidate_item_id )
+
+        if candidate_name then
+          local matches = name_index[ normalize_name( candidate_name ) ]
+
+          for _, source_item_id in ipairs( matches or {} ) do
+            if source_item_id ~= candidate_item_id then
+              add_match( result, source_item_id, {
+                item_id = candidate_item_id,
+                item_name = candidate_name,
+                expected = true
+              } )
+            end
+          end
+        else
+          warm_item_cache( candidate_item_id )
+        end
+      end
+    end
+  end
+
+  local function get_expected_matches_by_source_item_id( name_index )
+    local result = {}
+
+    if not use_item_names or not use_item_names.is_enabled() then return result end
+    if name_index_dirty then build_name_index() end
+
+    add_expected_matches( result, name_index )
+
+    for _, matches in pairs( result ) do
+      table.sort( matches, function( left, right ) return left.item_id < right.item_id end )
+    end
+
+    return result
+  end
+
+  local function merge_matched_items( observed_items, expected_items )
+    local result = {}
+    local seen = {}
+
+    for _, item in ipairs( observed_items or {} ) do
+      if not seen[ item.item_id ] then
+        table.insert( result, item )
+        seen[ item.item_id ] = true
+      end
+    end
+
+    for _, item in ipairs( expected_items or {} ) do
+      if not seen[ item.item_id ] then
+        table.insert( result, item )
+        seen[ item.item_id ] = true
+      end
+    end
+
+    return result
+  end
+
+  local function add_name_mapping_rows( rows, reserve_type, data, match_history, expected_matches )
     local all_resolved = true
     local history_by_source = get_history_by_source_item_id( match_history )
 
@@ -397,11 +474,12 @@ function M.new( db, use_item_names, ace_timer )
           reserve_quality = item.quality,
           rollers = item.rollers and #item.rollers or nil,
           matched_item_id = matched_item and matched_item.item_id or nil,
-          matched_item_name = matched_item and matched_item.item_name or nil
+          matched_item_name = matched_item and matched_item.item_name or nil,
+          matched_item_expected = matched_item and matched_item.expected or false
         } )
       end
 
-      local matched_items = history_by_source[ item_id ]
+      local matched_items = merge_matched_items( history_by_source[ item_id ], expected_matches[ item_id ] )
       if matched_items and matched_items[ 1 ] then
         for _, matched_item in ipairs( matched_items ) do
           add_row( matched_item )
@@ -416,8 +494,13 @@ function M.new( db, use_item_names, ace_timer )
 
   local function get_name_mapping_info()
     local rows = {}
-    local sr_resolved = add_name_mapping_rows( rows, "SR", softres_data, sr_name_match_history )
-    local hr_resolved = add_name_mapping_rows( rows, "HR", hardres_data, hr_name_match_history )
+
+    if use_item_names and use_item_names.is_enabled() and name_index_dirty then build_name_index() end
+
+    local sr_expected_matches = get_expected_matches_by_source_item_id( sr_name_index )
+    local hr_expected_matches = get_expected_matches_by_source_item_id( hr_name_index )
+    local sr_resolved = add_name_mapping_rows( rows, "SR", softres_data, sr_name_match_history, sr_expected_matches )
+    local hr_resolved = add_name_mapping_rows( rows, "HR", hardres_data, hr_name_match_history, hr_expected_matches )
 
     table.sort( rows, function( left, right )
       if left.type ~= right.type then return left.type > right.type end

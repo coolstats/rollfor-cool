@@ -657,7 +657,7 @@ local function create_mapping_frame( api, on_back, use_item_names, on_use_item_n
       row.cell_reserve_id:SetText( tostring( data.reserve_item_id ) )
       set_item_cell( row.cell_reserve, data.reserve_item_id, data.reserve_quality, data.reserve_item_name )
       row.cell_match_id:SetText( data.matched_item_id and tostring( data.matched_item_id ) or m.colors.grey( "-" ) )
-      set_item_cell( row.cell_match, data.matched_item_id, nil, data.matched_item_name, "not seen yet" )
+      set_item_cell( row.cell_match, data.matched_item_id, nil, data.matched_item_name, "not resolved yet" )
       row.cell_rollers:SetText( data.rollers and tostring( data.rollers ) or m.colors.grey( "-" ) )
     end
 
@@ -678,9 +678,9 @@ local function create_mapping_frame( api, on_back, use_item_names, on_use_item_n
     if #current_rows == 0 then
       status_label:SetText( "No soft-reserve items imported." )
     elseif info and info.all_resolved then
-      status_label:SetText( "Ready. Matched Item fills in after a same-name dropped item is seen." )
+      status_label:SetText( "Ready. Matched Item uses original 3.3.5 ToGC heroic IDs resolved by this client." )
     else
-      status_label:SetText( "Some item names are still waiting for the 3.3.5a client cache." )
+      status_label:SetText( "Some item names are still waiting for the 3.3.5a client cache. Wait a moment, then Refresh." )
     end
 
     render_rows()
