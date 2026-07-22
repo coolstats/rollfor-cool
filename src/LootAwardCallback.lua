@@ -35,9 +35,16 @@ function M.new( awarded_loot, roll_controller, winner_tracker, group_roster, sof
       return
     end
 
-    local roll_tracker = rc.get_roll_tracker( item_id )
-    local _, current_iteration = roll_tracker.get()
-    local roll_data = m.find( player_name, current_iteration.rolls, 'player_name' )
+    local roll_tracker
+    local current_iteration
+    local roll_data
+    local ok, result = pcall( rc.get_roll_tracker, item_id )
+    if ok then
+      roll_tracker = result
+      _, current_iteration = roll_tracker.get()
+      roll_data = current_iteration and m.find( player_name, current_iteration.rolls, 'player_name' )
+    end
+
     local sr_players = softres.get( item_id )
     local sr_player = m.find( player_name, sr_players, 'name' )
     local rolling_strategy
@@ -48,7 +55,10 @@ function M.new( awarded_loot, roll_controller, winner_tracker, group_roster, sof
     else
       local winners = winner_tracker.find_winners( item_link )
       local winner = m.find( player_name, winners, 'winner_name' )
-      rolling_strategy = winner and winner.rolling_strategy
+      if winner then
+        rolling_strategy = winner.rolling_strategy
+        roll_data = { roll_type = winner.roll_type, roll = winner.winning_roll }
+      end
     end
 
     if not player_class then
@@ -69,7 +79,9 @@ function M.new( awarded_loot, roll_controller, winner_tracker, group_roster, sof
   
     if is_trade then return end
 
-    rc.loot_awarded( item_id, item_link, player_name, player_class or class )
+    if roll_tracker then
+      rc.loot_awarded( item_id, item_link, player_name, player_class or class )
+    end
 
     winner_tracker.untrack( player_name, item_link )
 
@@ -77,7 +89,11 @@ function M.new( awarded_loot, roll_controller, winner_tracker, group_roster, sof
       awarded_loot.update_item(getn(awarded_loot.get_winners()), { plus_one = plus_one })
     end
 
-    if config.handle_plus_ones() and roll_data ~= nil and roll_data.roll_type == RollType.MainSpec then
+    if config.handle_plus_ones()
+        and roll_data ~= nil
+        and roll_data.roll_type == RollType.MainSpec
+        and rolling_strategy ~= m.Types.RollingStrategy.RaidRoll
+        and rolling_strategy ~= m.Types.RollingStrategy.InstaRaidRoll then
       if config.plus_one_prompt() then
         local colorized_player_name = m.colorize_player_by_class(player_name, player_class or class) or m.colors.grey( player_name )
         confirm_popup.show( { "Should " .. colorized_player_name .. " get a +1 for " .. item_link .. "?" }, on_confirm_plus_one)

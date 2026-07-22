@@ -39,7 +39,7 @@ function M.new( loot_list, api, db, config, player_info )
 
   local function find_my_candidate_index( slot )
     for i = 1, 40 do
-      if m.vanilla then
+      if m.vanilla or m.wotlk then
         local name = m.api.GetMasterLootCandidate( i )
 
         if name == api().UnitName( "player" ) then
@@ -207,7 +207,7 @@ function M.new( loot_list, api, db, config, player_info )
   end
 
   local function loot_item( slot )
-    local index = find_my_candidate_index()
+    local index = find_my_candidate_index( slot )
 
     if index then
       api().GiveMasterLoot( slot, index )

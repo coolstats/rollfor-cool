@@ -46,7 +46,7 @@ function M.new( main )
         end
       end )
     else
-      m.error( "Encoding of SR data failed" )
+      m.err( "Encoding of SR data failed" )
     end
   end
 
