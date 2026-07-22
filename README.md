@@ -18,10 +18,10 @@ rollfor_cool is a Wrath of the Lich King 3.3.5a addon for running loot rolls wit
 Copy this addon folder into:
 
 ```text
-World of Warcraft\Interface\AddOns\RollFor_cool
+World of Warcraft\Interface\AddOns\rollfor-cool
 ```
 
-The folder includes `RollFor_cool.toc` for that install name. It also keeps `RollFor-WotLK.toc` for compatibility with older package names.
+The folder includes `rollfor-cool.toc` so a normal GitHub clone works without renaming the folder. It also keeps `RollFor_cool.toc` and `RollFor-WotLK.toc` for compatibility with older package names.
 
 ## Soft-Reserve Setup
 
