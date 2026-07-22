@@ -43,15 +43,15 @@ function M.new(
 
     for _ = 1, item_count do
       local roll = m.lua.math.random( 1, getn( candidates ) )
-      table.insert( m_winners, candidates[ roll ] )
+      table.insert( m_winners, { player = candidates[ roll ], roll = roll } )
     end
 
     local winners = m.map( m_winners,
-      ---@param player ItemCandidate|Player
-      function( player )
-        if type( player ) == "table" then -- Lua 5.0 compatibility guard for sparse mapped values.
-          local winner = make_winner( player.name, player.class, item, player.type == "ItemCandidate" or false, roll_type, nil )
-          winner_tracker.track( winner.name, item.link, roll_type, nil, m.Types.RollingStrategy.InstaRaidRoll )
+      function( entry )
+        if type( entry ) == "table" and type( entry.player ) == "table" then
+          local player = entry.player
+          local winner = make_winner( player.name, player.class, item, player.type == "ItemCandidate" or false, roll_type, entry.roll )
+          winner_tracker.track( winner.name, item.link, roll_type, entry.roll, m.Types.RollingStrategy.InstaRaidRoll )
           return winner
         end
       end )
@@ -67,7 +67,7 @@ function M.new(
     end
 
     for _, winner in ipairs( m_winners ) do
-      chat.info( string.format( "%s won %s.", hl( winner.name ), item.link ), nil, "InstaRaidRoll" )
+      if winner.player then chat.info( string.format( "%s won %s.", hl( winner.player.name ), item.link ), nil, "InstaRaidRoll" ) end
     end
   end
 

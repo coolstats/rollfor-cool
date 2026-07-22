@@ -201,6 +201,7 @@ local function create_components()
   M.master_loot = m.MasterLoot.new( M.master_loot_candidates, M.loot_award_callback, M.loot_list, M.roll_controller )
   M.auto_loot = m.AutoLoot.new( M.loot_list, M.api, db( "auto_loot" ), M.config, M.player_info )
   M.dropped_loot_announce = m.DroppedLootAnnounce.new( M.loot_list, M.chat, M.dropped_loot, M.softres, M.winner_tracker, M.player_info, M.auto_loot, M.config )
+  M.raid_recap = m.RaidRecap.new( db( "raid_recap" ), M.api, M.roll_controller, M.confirm_popup )
   M.winners_popup = m.WinnersPopup.new( popup_builder(), m.FrameBuilder, db( "winners_popup" ), M.awarded_loot, M.roll_controller, M.confirm_popup, M.config )
   M.options_popup = m.OptionsPopup.new( popup_builder(), M.awarded_loot, M.version_broadcast, M.config_event_bus, M.confirm_popup, M.group_roster, db( "options_popup" ), db( "config" ), M.config )
 
@@ -279,6 +280,19 @@ end
 
 local function on_roll_command( roll_slash_command )
   return function( args )
+    args = args or ""
+    local command = string.gsub( args, "^%s*(.-)%s*$", "%1" )
+
+    if command == "recap" then
+      M.raid_recap.show()
+      return
+    end
+
+    if command == "recap clear" then
+      M.raid_recap.confirm_clear()
+      return
+    end
+
     if M.rolling_logic.is_rolling() then
       M.chat.info( "Rolling is in progress." )
       return
@@ -570,6 +584,7 @@ function M.on_player_login()
   M.version_broadcast.broadcast()
   M.import_encoded_softres_data( M.softres_db.data )
   M.softres_gui.load( M.softres_db.data )
+  M.raid_recap.on_zone_changed()
 
   if M.welcome_popup.should_show() then M.welcome_popup.show() end
   LootFrame:UnregisterAllEvents()

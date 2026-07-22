@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: |cff209ff9rollfor_cool|r
 ## Author: coolstats
-## Version: 1.0.16
+## Version: 1.0.17
 ## Notes: Automated item rolling with softres.it support and 3.3.5a Trial of the Crusader heroic name matching.
 ## SavedVariables: RollForDb
 ## SavedVariablesPerCharacter: RollForCharDb
@@ -72,6 +72,7 @@ src\OptionsPopup.lua
 src\WinnersPopup.lua
 src\WinnersPopupGui.lua
 src\ConfirmPopup.lua
+src\RaidRecap.lua
 src\SoftResRollGuiData.lua
 src\TieRollGuiData.lua
 src\RollingPopupContentTransformer.lua

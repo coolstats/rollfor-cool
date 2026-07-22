@@ -12,7 +12,7 @@ M.api = getfenv()
 
 M.addon_name = "RollFor-WotLK"
 if M.api.GetAddOnMetadata then
-  for _, addon_name in ipairs( { "RollFor_cool", "RollFor-WotLK", "RollFor" } ) do
+  for _, addon_name in ipairs( { "rollfor-cool", "RollFor_cool", "RollFor-WotLK", "RollFor" } ) do
     if M.api.GetAddOnMetadata( addon_name, "Title" ) then
       M.addon_name = addon_name
       break
@@ -527,6 +527,7 @@ end
 function M.get_addon_version()
     -- Attempt to get the version safely
     local version_str = GetAddOnMetadata(M.addon_name, "Version")
+                     or GetAddOnMetadata("rollfor-cool", "Version")
                      or GetAddOnMetadata("RollFor_cool", "Version")
                      or GetAddOnMetadata("RollFor", "Version") 
                      or GetAddOnMetadata("RollFor-WotLK", "Version") 

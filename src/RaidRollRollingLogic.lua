@@ -88,15 +88,15 @@ function M.new(
     if player.name ~= roller.get_name() then return end
     if min ~= 1 or max ~= getn( candidates ) then return end
 
-    table.insert( m_winners, candidates[ roll ] )
+    table.insert( m_winners, { player = candidates[ roll ], roll = roll } )
     if getn( m_winners ) < item_count then return end
 
     local winners = m.map( m_winners,
-      ---@param p ItemCandidate|Player
-      function( p )
-        if type( p ) == "table" then                                                                       -- Lua 5.0 compatibility guard for sparse mapped values.
-          local winner = make_winner( p.name, p.class, item, p.type == "ItemCandidate" or false, roll_type, nil )
-          winner_tracker.track( winner.name, item.link, roll_type, nil, m.Types.RollingStrategy.RaidRoll )
+      function( entry )
+        if type( entry ) == "table" and type( entry.player ) == "table" then
+          local p = entry.player
+          local winner = make_winner( p.name, p.class, item, p.type == "ItemCandidate" or false, roll_type, entry.roll )
+          winner_tracker.track( winner.name, item.link, roll_type, entry.roll, m.Types.RollingStrategy.RaidRoll )
           return winner
         end
       end )
@@ -117,7 +117,7 @@ function M.new(
     end
 
     for _, winner in ipairs( m_winners ) do
-      chat.info( string.format( "%s won %s.", hl( winner.name ), item.link ), nil, "RaidRoll" )
+      if winner.player then chat.info( string.format( "%s won %s.", hl( winner.player.name ), item.link ), nil, "RaidRoll" ) end
     end
   end
 

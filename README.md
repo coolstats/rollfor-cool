@@ -11,6 +11,7 @@ rollfor_cool is a Wrath of the Lich King 3.3.5a addon for running loot rolls wit
 - Answer raider whispers of `?sr` with their current soft-reserved items.
 - Show a scrollable in-game soft-reserve table with `/srs`.
 - Match Trial of the Crusader normal item reserves to same-named heroic drops without relying on Classic re-release item IDs.
+- Keep a persistent raid recap of rolled items, winners, winning rolls, and the detected instance.
 - Track winners, plus-ones, raid trades, and awarded loot.
 
 ## Install
@@ -51,6 +52,8 @@ Open `/sr` after importing to view the reserve table; it shows each reserved ite
 /src                Check who has not soft-reserved
 /srca               Announce missing soft reserves
 /sro                Manually match mistyped softres names
+/rf recap           Open raid recap history
+/rf recap clear     Clear raid recap history
 /rfw                Open winner history
 /rfo                Open options
 ```

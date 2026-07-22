@@ -51,6 +51,8 @@ function M.handle_events( main )
       main.on_chat_msg_system( arg1, arg2, arg3, arg4, arg5 )
     elseif event == "CHAT_MSG_ADDON" then
       main.on_chat_msg_addon( arg1, arg2, arg3, arg4 )
+    elseif event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
+      if main.raid_recap then main.raid_recap.on_zone_changed() end
     elseif event == "TRADE_SHOW" then
       main.trade_tracker.on_trade_show()
     elseif event == "TRADE_PLAYER_ITEM_CHANGED" then
